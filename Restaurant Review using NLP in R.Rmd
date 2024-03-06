@@ -1,0 +1,178 @@
+---
+title: "R Notebook"
+output:
+  html_document:
+    df_print: paged
+---
+
+
+
+```{r}
+restaurants = read.delim("C:\\Users\\shubham\\Documents\\Personal Docs\\Final Job Application Docs\\Specific Companies\\Prof. Bryce\\Restaurant_Reviews.tsv", quote = '', stringsAsFactors = FALSE)
+head(restaurants)
+#Reads a TSV file of restaurant reviews into restaurants without converting strings to factors, then displays its first few rows.
+
+```
+
+```{r}
+#install.packages('tm')
+
+library(tm)
+# package for text mining in R
+
+```
+```{r}
+corpus = VCorpus(VectorSource(restaurants$Review))
+#Creates a text corpus from the Review column of the restaurants data frame using the tm package.
+```
+
+
+```{r}
+as.character(corpus[[1]]) #Converts the first document in the corpus to character format.
+```
+```{r}
+corpus = tm_map(corpus, content_transformer(tolower))
+#Applies lowercase transformation to all text in the corpus.
+
+```
+
+
+```{r}
+as.character(corpus[[1]]) #Converts the first document in the modified corpus to character format.
+```
+```{r}
+as.character(corpus[[841]]) #Converts the 841st document in the corpus to character format.
+
+```
+```{r}
+corpus = tm_map(corpus, removeNumbers) #Removes numbers from all documents in the corpus.
+```
+
+
+```{r}
+as.character(corpus[[841]]) #Converts the 841st document in the number-removed corpus to character format.
+
+```
+```{r}
+corpus = tm_map(corpus, removePunctuation) #Removes punctuation from all documents in the corpus.
+
+```
+
+```{r}
+as.character(corpus[[1]]) #Converts the first document in the punctuation-removed corpus to character format.
+
+```
+```{r}
+#install.packages("Snowballc")
+library(SnowballC) #Loads the SnowballC package for text stemming in R.
+```
+
+
+```{r}
+corpus = tm_map(corpus, removeWords, stopwords()) #Removes common stopwords from all documents in the corpus.
+```
+
+```{r}
+as.character(corpus[[1]])
+#Converts the first document in the stopwords-removed corpus to character format.
+```
+```{r}
+corpus = tm_map(corpus, stemDocument)
+#Applies stemming to all documents in the corpus, reducing words to their root forms.
+```
+
+```{r}
+as.character(corpus[[1]]) #Converts the first document in the stemmed corpus to character format.
+```
+```{r}
+corpus = tm_map(corpus, stripWhitespace) #Removes extra whitespace from all documents in the corpus.
+```
+
+```{r}
+as.character(corpus[[841]]) #Converts the 841st document in the whitespace-stripped corpus to character format.
+```
+```{r}
+dtm = DocumentTermMatrix(corpus) #Creates a document-term matrix (dtm) from the processed corpus.
+```
+
+```{r}
+dtm = removeSparseTerms(dtm, 0.999) #Removes terms from the dtm that appear in less than 0.1% of the documents.
+```
+
+
+```{r}
+reviews = as.data.frame(as.matrix(dtm)) #Converts the document-term matrix (dtm) into a data frame named reviews.
+```
+
+```{r}
+reviews$Liked = restaurants$Liked
+# Adds a Liked column from the restaurants data frame to the reviews data frame.
+```
+
+```{r}
+reviews$Liked = factor(reviews$Liked, levels = c(0, 1))
+# Converts the Liked column in reviews to a factor with levels 0 and 1.
+```
+
+```{r}
+#install.packages('caTools')
+
+library(caTools)
+# Loads the caTools package for data splitting, preprocessing, and more in R.
+```
+```{r}
+set.seed(923)
+#Sets the random number generator's seed to 923 for reproducibility in R.
+```
+
+```{r}
+split = sample.split(reviews$Liked, SplitRatio = 0.80)
+training_set = subset(reviews, split == TRUE)
+test_set = subset(reviews, split == FALSE)
+
+#Splits the reviews data frame into training (80%) and test (20%) sets based on the Liked column.
+```
+
+```{r}
+#install.packages('randomForest')
+library(randomForest)
+
+# randomForest package in R, which provides tools for creating random forest models.
+
+
+```
+```{r}
+classifier = randomForest(x = training_set[-692],
+                          y = training_set$Liked,
+                          ntree = 10)
+# Trains a random forest classifier with 10 trees on the training set, excluding column 692.
+
+```
+
+```{r}
+y_pred = predict(classifier, newdata = test_set[-692])
+#Predicts outcomes for the test_set using the trained random forest classifier, excluding column 692 from the input data.
+```
+
+```{r}
+cm = table(test_set[, 692], y_pred)
+cm
+# Compares the actual values from the test_set (column 692) against the predicted values (y_pred) to form a confusion matrix (cm).
+# Output Explained
+#True Negatives (TN): 88 instances were correctly predicted as class 0.
+#False Positives (FP): 12 instances were incorrectly predicted as class 1 when they are actually class 0.
+#False Negatives (FN): 26 instances were incorrectly predicted as class 0 when they are actually class 1.
+#True Positives (TP): 74 instances were correctly predicted as class 1. 
+
+
+```
+
+
+
+
+
+Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Ctrl+Alt+I*.
+
+When you save the notebook, an HTML file containing the code and output will be saved alongside it (click the *Preview* button or press *Ctrl+Shift+K* to preview the HTML file).
+
+The preview shows you a rendered HTML copy of the contents of the editor. Consequently, unlike *Knit*, *Preview* does not run any R code chunks. Instead, the output of the chunk when it was last run in the editor is displayed.
